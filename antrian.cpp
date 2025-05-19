@@ -11,12 +11,15 @@
 #include <cstdlib>
 #include <ctime>
 #include <iomanip>
+#include <conio.h>
 
 using namespace std;
 
 struct Customer
 {
     int id;
+    string nama;
+    string merk;
     int arrivalTime;
     int serviceTime;
     int startTime;
@@ -43,6 +46,7 @@ public:
     void enqueue(int currentTime);
     void processQueue();
     void printQueue();
+    void clearQueue();
     ~Queue();
 };
 
@@ -64,6 +68,9 @@ void Queue::enqueue(int currentTime)
     }
 
     cout << "Customer " << count << " masuk antrian pada waktu " << arrival << " dengan service time " << service << "\n";
+    cout << "Klik untuk melanjutkan...\n";
+    _getch();
+    system("cls");
 }
 
 void Queue::processQueue()
@@ -95,16 +102,24 @@ void Queue::processQueue()
 void Queue::printQueue()
 {
     Node *curr = front;
-    cout << "\n---------------------------------------------------------\n";
-    cout << left << setw(5) << "ID"
-         << setw(10) << "Arrival"
-         << setw(10) << "Service"
-         << setw(10) << "Start"
-         << setw(10) << "Finish"
-         << setw(10) << "Waiting\n";
-    cout << "---------------------------------------------------------\n";
+    
+    cout << "\n+" << setfill('-') << setw(50) << right << "+" << endl;
+    cout << "|" << setfill(' ') << setw(30) << right << "PBO Grup" << setw(20) << setfill(' ') << "|" << endl;
+    cout << "|" << setfill(' ') << setw(36) << right << "Antrian Service Motor" << setw(14) << setfill(' ') << "|" << endl;
+    cout << "+" << setfill('-') << setw(50) << right << "+" << endl;
+    
+    cout << "|" << setfill(' ') << setw(3) << left << "ID"
+    << "|" << setfill(' ') << setw(8) << left << "Arrival"
+    << "|" << setfill(' ') << setw(8) << left << "Service"
+    << "|" << setfill(' ') << setw(8) << left << "Start"
+    << "|" << setfill(' ') << setw(8) << left << "Finish"
+    << "|" << setfill(' ') << setw(8) << left << "Waiting" 
+    << "|"  << endl;
+    cout << "+" << setfill('-') << setw(45) << right << "+" << endl;
+
     double totalWait = 0;
     int totalCust = 0;
+    
 
     while (curr)
     {
@@ -120,7 +135,11 @@ void Queue::printQueue()
     cout << "Rata-rata waktu tunggu: "
          << fixed << setprecision(2)
          << (totalCust > 0 ? totalWait / totalCust : 0.0) << "\n";
+    cout << "Klik untuk melanjutkan...\n";
+    _getch();
+    system("cls");
 }
+
 
 Queue::~Queue()
 {
@@ -132,8 +151,20 @@ Queue::~Queue()
     }
 }
 
+void Queue::clearQueue()
+{
+    front = rear = nullptr;
+    count = 0;
+
+    cout << "Antrian telah dikosongkan.\n";
+    cout << "Klik untuk melanjutkan...\n";
+    _getch();
+    system("cls");
+}
+
 int main()
 {
+    system("cls");
     srand(time(0));
     Queue antrian;
     int time = 0;
@@ -143,10 +174,12 @@ int main()
 
     do
     {
-        cout << "\n===== Menu Simulasi Antrian =====\n";
+        cout << "\n===== PBO Group =====\n";
+        cout << "\n------ Antrian ------\n";
         cout << "[1] Tambah Customer\n";
         cout << "[2] Tampilkan Antrian\n";
         cout << "[3] Simulasikan Pelayanan\n";
+        cout << "[4] Kosongkan Antrian\n";
         cout << "[0] Keluar\n";
         cout << "Pilihan: ";
         cin >> choice;
@@ -157,9 +190,11 @@ int main()
             time += rand() % 5 + 1; // simulasikan waktu berjalan
             antrian.enqueue(time);
             break;
+
         case 2:
             antrian.printQueue();
             break;
+
         case 3:
             antrian.processQueue();
             // if (!alreadyProcessed)
@@ -172,11 +207,19 @@ int main()
             //     cout << "Antrian sudah diproses sebelumnya.\n";
             // }
             break;
+
+        case 4:
+            antrian.clearQueue();
+            break;
+
         case 0:
             cout << "Keluar dari program.\n";
             break;
-        default:
+        
+            default:
             cout << "Pilihan tidak valid!\n";
+            _getch();
+            system("cls");
         }
 
     } while (choice != 0);
