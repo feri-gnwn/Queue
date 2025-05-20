@@ -1,17 +1,7 @@
-// mensimulasikan antrian
-
-// no antrian
-// kapan masuk ke antrian(time)
-// kapan keluar dari antrian (service time)
-
-// waktunya acak, tapi karna dia antrian Waktu acakny hrus berurut
-// dan rata rata servis time nya
-
 #include <iostream>
-#include <cstdlib>
-#include <ctime>
 #include <iomanip>
-#include <conio.h>
+#include <fstream>
+#include <ctime>
 
 using namespace std;
 
@@ -20,11 +10,10 @@ struct Customer
     int id;
     string nama;
     string merk;
-    int arrivalTime;
-    int serviceTime;
-    int startTime;
-    int departureTime;
-    int waitingTime;
+    time_t kedatangan;
+    time_t waktuMulai;
+    time_t waktuSelesai;
+    int waktuPelayanan;
 };
 
 struct Node
@@ -37,25 +26,53 @@ struct Node
 class Queue
 {
 private:
+    private:
     Node *front;
     Node *rear;
-    int count = 0;
+    int count;
+    time_t lastArrival = 0; // Waktu kedatangan terakhir
 
 public:
-    Queue() : front(nullptr), rear(nullptr) {}
-    void enqueue(int currentTime);
+    Queue() : front(nullptr), rear(nullptr), count(0) {}
+    void enqueue(string nama, string merk);
     void processQueue();
     void printQueue();
     void clearQueue();
+    string potongString(const string &s, size_t maxLen);
     ~Queue();
 };
 
-void Queue::enqueue(int currentTime)
+string Queue::potongString(const string &s, size_t maxLen)
+{
+    return s.length() > maxLen ? s.substr(0, maxLen) : s;
+}
+
+void Queue::enqueue(string nama, string merk)
 {
     count++;
-    int arrival = currentTime;
-    int service = rand() % 50 + 10; // 10 - 50 menit
-    Customer cust = {count, arrival, service, 0, 0, 0};
+    Customer cust;
+    cust.id = count;
+    cust.nama = nama;
+    cust.merk = merk;
+
+    int offsetMinutes = rand() % 31 + 5; // Tambah 5-35 menit
+
+    // Jika customer pertama, pakai waktu sekarang
+    if (lastArrival == 0)
+    {
+        cust.kedatangan = time(0);
+    }
+    else
+    {
+        cust.kedatangan = lastArrival + (offsetMinutes * 60); // setelah customer sebelumnya
+    }
+
+    lastArrival = cust.kedatangan;
+
+    cust.waktuPelayanan = rand() % 131 + 20; // 20 - 150 menit
+    cust.waktuMulai = 0;
+    cust.waktuSelesai = 0;
+
     Node *temp = new Node(cust);
     if (!front)
     {
@@ -67,88 +84,118 @@ void Queue::enqueue(int currentTime)
         rear = temp;
     }
 
-    cout << "Customer " << count << " masuk antrian pada waktu " << arrival << " dengan service time " << service << "\n";
-    cout << "Klik untuk melanjutkan...\n";
-    _getch();
+    cout << "\n-" << setfill('-') << setw(70) << right << "-" << endl;
+    cout << setfill(' ');
+    cout << "Nama customer             : " << cust.nama << endl;
+    cout << "Merk motor                : " << cust.merk << endl;
+    cout << "Waktu kedatangan          : " << ctime(&cust.kedatangan);
+    cout << "Perkiraan waktu pelayanan : " << cust.waktuPelayanan << " menit\n";
+    cout << "-" << setfill('-') << setw(70) << right << "-" << endl;
+    cout << setfill(' ') << left;
+
+    cout << "Telah ditambahkan ke antrian." << endl;
+
+    system("pause");
     system("cls");
 }
+
 
 void Queue::processQueue()
 {
     if (!front)
     {
         cout << "Antrian kosong.\n";
+        system("pause");
+        system("cls");
         return;
     }
 
-    cout << "\nMemproses antrian...\n";
-    int currentTime = 0;
-    Node *curr = front;
+    Node *current = front;
+    time_t startTime = current->data.kedatangan;
 
-    while (curr)
+    while (current)
     {
-        Customer &c = curr->data;
-        c.startTime = max(currentTime, c.arrivalTime);
-        c.departureTime = c.startTime + c.serviceTime;
-        c.waitingTime = c.startTime - c.arrivalTime;
+        if (startTime < current->data.kedatangan)
+        {
+            startTime = current->data.kedatangan;
+        }
 
-        currentTime = c.departureTime;
-        curr = curr->next;
+        current->data.waktuMulai = startTime;
+        current->data.waktuSelesai = current->data.waktuMulai + (current->data.waktuPelayanan * 60);
+        startTime = current->data.waktuSelesai;
+        current = current->next;
     }
-
     printQueue();
+
+    system("pause");
+    system("cls");
 }
 
 void Queue::printQueue()
 {
-    Node *curr = front;
-    
-    cout << "\n+" << setfill('-') << setw(50) << right << "+" << endl;
-    cout << "|" << setfill(' ') << setw(30) << right << "PBO Grup" << setw(20) << setfill(' ') << "|" << endl;
-    cout << "|" << setfill(' ') << setw(36) << right << "Antrian Service Motor" << setw(14) << setfill(' ') << "|" << endl;
-    cout << "+" << setfill('-') << setw(50) << right << "+" << endl;
-    
-    cout << "|" << setfill(' ') << setw(3) << left << "ID"
-    << "|" << setfill(' ') << setw(8) << left << "Arrival"
-    << "|" << setfill(' ') << setw(8) << left << "Service"
-    << "|" << setfill(' ') << setw(8) << left << "Start"
-    << "|" << setfill(' ') << setw(8) << left << "Finish"
-    << "|" << setfill(' ') << setw(8) << left << "Waiting" 
-    << "|"  << endl;
-    cout << "+" << setfill('-') << setw(45) << right << "+" << endl;
-
     double totalWait = 0;
     int totalCust = 0;
-    
+    if (!front)
+    {
+        cout << "Antrian kosong.\n";
+        system("pause");
+        system("cls");
+        return;
+    }
+
+    Node *curr = front;
+    cout << "\n+" << setfill('-') << setw(100) << right << "+" << endl;
+    cout << "|" << setfill(' ') << setw(55) << right << "PBO Group" << setw(45) << setfill(' ') << "|" << endl;
+    cout << "|" << setfill(' ') << setw(61) << right << "Antrian Service Motor" << setw(39) << setfill(' ') << "|" << endl;
+    cout << "+" << setfill('-') << setw(100) << right << "+" << endl;
+    cout << setfill(' ') << left;
+
+    cout << "| " << setw(2) << left << "ID"
+         << " | " << setw(20) << left << "Nama"
+         << " | " << setw(16) << left << "Merk"
+         << " | " << setw(10) << left << "Kedatangan "
+         << " | " << setw(14) << left << "Pelayanan"
+         << " | " << setw(8) << left << "Mulai"
+         << " | " << setw(8) << left << "Selesai"
+         << " |" << endl;
+
+    cout << "+" << setfill('-') << setw(100) << right << "+" << endl;
+    cout << setfill(' ') << left;
 
     while (curr)
     {
         Customer &c = curr->data;
-        cout << c.id << "\t" << c.arrivalTime << "\t" << c.serviceTime << "\t"
-             << c.startTime << "\t" << c.departureTime << "\t" << c.waitingTime << "\n";
-        totalWait += c.waitingTime;
+        cout << "| " << setw(2) << left << c.id
+             << " | " << setw(20) << left << potongString(c.nama, 19)
+             << " | " << setw(16) << left << potongString(c.merk, 15)
+             << " | " << put_time(localtime(&c.kedatangan), " %H:%M:%S  ")
+             << " | " << setw(12) << right << (to_string(c.waktuPelayanan) + " menit      ")
+             << " | " << put_time(localtime(&c.waktuMulai), " %H:%M  ")
+             << " | " << put_time(localtime(&c.waktuSelesai), " %H:%M  ")
+             << " |" << endl;
+
+        totalWait += c.waktuPelayanan;
         totalCust++;
         curr = curr->next;
     }
 
-    cout << "---------------------------------------------------------\n";
-    cout << "Rata-rata waktu tunggu: "
-         << fixed << setprecision(2)
-         << (totalCust > 0 ? totalWait / totalCust : 0.0) << "\n";
-    cout << "Klik untuk melanjutkan...\n";
-    _getch();
-    system("cls");
-}
+    cout << "+" << setfill('-') << setw(100) << right << "+" << endl;
 
-
-Queue::~Queue()
-{
-    while (front)
+    double avgWait = (totalCust > 0 ? totalWait / totalCust : 0.0);
+    if (avgWait >= 60)
     {
-        Node *temp = front;
-        front = front->next;
-        delete temp;
+        int jam = static_cast<int>(avgWait) / 60;
+        int menit = static_cast<int>(avgWait) % 60;
+        cout << "Rata-rata waktu tunggu: " << jam << " jam " << menit << " menit" << endl;
     }
+    else
+    {
+        cout << "Rata-rata waktu tunggu: " << fixed << setprecision(2) << avgWait << " menit" << endl;
+    }
+
+    cout << "Total customer: " << totalCust << endl;
+    system("pause");
+    system("cls");
 }
 
 void Queue::clearQueue()
@@ -157,28 +204,31 @@ void Queue::clearQueue()
     count = 0;
 
     cout << "Antrian telah dikosongkan.\n";
-    cout << "Klik untuk melanjutkan...\n";
-    _getch();
+    system("pause");
     system("cls");
+}
+
+Queue::~Queue()
+{
+    clearQueue();
 }
 
 int main()
 {
+    system("color 0B");
     system("cls");
-    srand(time(0));
     Queue antrian;
-    int time = 0;
+    string nama, merk;
     int choice;
-    // bool alreadyProcessed = false;
+    srand(time(0));
 
-
-    do
+    while (true)
     {
         cout << "\n===== PBO Group =====\n";
         cout << "\n------ Antrian ------\n";
         cout << "[1] Tambah Customer\n";
-        cout << "[2] Tampilkan Antrian\n";
-        cout << "[3] Simulasikan Pelayanan\n";
+        cout << "[2] Simulasikan Pelayanan\n";
+        cout << "[3] Tampilkan Antrian\n";
         cout << "[4] Kosongkan Antrian\n";
         cout << "[0] Keluar\n";
         cout << "Pilihan: ";
@@ -187,25 +237,20 @@ int main()
         switch (choice)
         {
         case 1:
-            time += rand() % 5 + 1; // simulasikan waktu berjalan
-            antrian.enqueue(time);
+            cout << "Masukkan nama customer: ";
+            cin.ignore();
+            getline(cin, nama);
+            cout << "Masukkan merk motor: ";
+            getline(cin, merk);
+            antrian.enqueue(nama, merk);
             break;
 
         case 2:
-            antrian.printQueue();
-            break;
-
-        case 3:
             antrian.processQueue();
-            // if (!alreadyProcessed)
-            // {
-            //     antrian.processQueue();
-            //     alreadyProcessed = true;
-            // }
-            // else
-            // {
-            //     cout << "Antrian sudah diproses sebelumnya.\n";
-            // }
+        break;
+        
+        case 3:
+            antrian.printQueue();
             break;
 
         case 4:
@@ -214,20 +259,14 @@ int main()
 
         case 0:
             cout << "Keluar dari program.\n";
-            break;
-        
-            default:
+            return 0;
+
+        default:
             cout << "Pilihan tidak valid!\n";
-            _getch();
+            system("pause");
             system("cls");
         }
-
-    } while (choice != 0);
+    }
 
     return 0;
 }
-
-// Fitur advanced:
-// 1. Masukan data nama yang antri dan waktu seperti jam namun acak ga hars jam sekarang. antrian berikutnya mengikuuti jam yang pertama
-// 2. Tammbahkan fitur untuk menghapus customer dari antrian
-// 3. Reset antrian
